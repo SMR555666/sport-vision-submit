@@ -1,0 +1,24 @@
+# ═══════════════════════════════════════════════════════════════════════
+# 全局关闭行尾转换 —— 本仓库任何文件都按原始字节存取。
+#
+# 为什么必须这样：
+#   组委会对每个任务的 core/*.py、scripts/*.py、run.py、run.sh、validate.py、
+#   integrity.py、README.md 记录 SHA256，run_all.sh / run.sh 启动时最先复核，
+#   任何一处字节不一致 → 直接 exit 4（该次提交无成绩）。
+#   LF ↔ CRLF 的自动归一化同样属于「字节不一致」。所以宁可让 Windows 侧的
+#   编辑器看到 LF 提示，也不能让 git 动行尾。
+#
+# 不要为了「Windows 下编辑方便」删掉下面这行。
+# ═══════════════════════════════════════════════════════════════════════
+* -text
+
+# 显式声明二进制，杜绝任何工具再做文本处理
+*.mp4   binary
+*.onnx  binary
+*.engine binary
+*.plan  binary
+*.tar   binary
+*.zip   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
