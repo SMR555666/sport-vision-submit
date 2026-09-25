@@ -21,7 +21,7 @@
 6. [三段自测](#6-三段自测)
 7. [开发：写你的 Solution](#7-开发写你的-solution)
 8. [提交](#8-提交)
-9. [上传到 GitHub 与协作](#9-上传到-github-与-协作)
+9. [上传到 GitHub 与协作](#9-上传到-github-与协作)
 10. [常见坑](#10-常见坑)
 
 ---
@@ -439,6 +439,8 @@ docker save sport-vision-submit:v1 -o sport-vision-submit.tar     # 上传这个
 
 ## 9. 上传到 GitHub 与协作
 
+> 本节只讲"推上去"这一个动作。**网页上怎么用、Actions 在跑什么、被拦住了怎么修、怎么和队友协作、以及哪些事 GitHub 根本做不了**，见专门手册 [`docs/GitHub使用手册.md`](docs/GitHub使用手册.md)。
+
 ### 9.1 绑远端并首次推送
 
 **第 1 步：把仓库真名抄准。** 打开仓库页面 → 绿色 `Code` → `HTTPS` → 复制那一行，形如 `https://github.com/<用户名>/<仓库名>.git`。这一步不要凭记忆打字。
@@ -609,6 +611,7 @@ git push origin baseline-package                # 先分支后标签，这条几
 | 文件 | 内容 |
 | --- | --- |
 | [`docs/赛题详情.md`](docs/赛题详情.md) | 赛题原文：任务描述、评分规则、提交形式、赛道限定条件 |
+| [`docs/GitHub使用手册.md`](docs/GitHub使用手册.md) | **GitHub 这一侧怎么用**：Actions 判读与手动触发、协作流程、网页操作速查、出错对照表、能力边界 |
 | [`docs/本地资源清单.md`](docs/本地资源清单.md) | D 盘资源实测清单、工程包缺文件事故的根因与修复记录 |
 | [`docs/提交记录.md`](docs/提交记录.md) | 5 次提交机会的留痕表 + 提交前检查清单 |
 | [`docker/README.md`](docker/README.md) | 22.7 GB 基础镜像（OCI 目录）的加载方法 |
