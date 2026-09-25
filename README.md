@@ -88,15 +88,22 @@ sport-vision-submit/                    ← git 仓库根
 
 ## 3. 红线：动这些直接没成绩
 
-组委会对以下文件记录 SHA256，`run_all.sh` / `run.sh` **启动时最先校验**，任何一处字节不一致就 `exit 4`，这次提交作废：
+组委会的 `participant/<task>/integrity.py` 会给**每个任务 14 个文件**记录 SHA256，写在 `participant/<task>/.integrity.json` 里；`run_all.sh` / `run.sh` **启动时最先校验**，任何一处字节不一致就 `exit 4`，这次提交作废：
 
 ```
-participant/run_all.sh
-participant/<task>/core/**            （全部 .py）
-participant/<task>/scripts/**         （全部 .py）
-participant/<task>/run.py  run.sh  validate.py  integrity.py  README.md
-participant/<task>/.integrity.json
+participant/<task>/core/**            8 个 .py
+participant/<task>/scripts/**         2 个 .py
+participant/<task>/run.py
+participant/<task>/run.sh
+participant/<task>/validate.py
+participant/<task>/integrity.py
+participant/<task>/.integrity.json    记录清单本身也纳入仓库 CI 比对
 ```
+
+另外两处虽然不在 SHA256 清单里（顶层没有 `.integrity.json`，且 `integrity.py` 的 `ROOT` 是任务目录，所以它们校验不到自己那一层），但同样是组委会框架的一部分——本仓库的 CI 会额外盯着：
+
+- `participant/run_all.sh`（联合入口）
+- `participant/README.md`（组委会说明文档）
 
 **只能改** `participant/<task>/participant/` 里的东西：
 
@@ -109,9 +116,10 @@ participant/<task>/.integrity.json
 
 三个容易踩的变形：
 
-1. **行尾**。`LF → CRLF` 的自动转换同样算「字节不一致」。本仓库已用 `.gitattributes` 的 `* -text` 全局关掉转换——**不要删这一行**，也不要用会擅自改行尾的编辑器保存这些文件。
-2. **顺手刷哈希**。改完 `core/` 再跑一遍 `integrity.py --generate` 把哈希刷成新的，本地能过、评测也能过——但这是「恶意改动」，规则明确取消成绩。CI 的第二道防线就是专门拦这个的（拿 `.integrity.json` 自身和 `baseline-package` 比）。
+1. **行尾**。`LF → CRLF` 的自动转换同样算「字节不一致」。本仓库已用 `.gitattributes` 的 `* -text` 全局关掉转换——**不要删这一行**，也不要用会擅自改行尾的编辑器保存这些文件。已实测：用 `core.autocrlf=true` 克隆一份，两个任务的完整性校验照样通过。
+2. **顺手刷哈希**。改完 `core/` 再跑一遍 `integrity.py --generate` 把哈希刷成新的，本地能过、评测也能过——但这是「恶意改动」，规则明确取消成绩。CI 的第二道防线专门拦这个：`.integrity.json` 自身也在比对范围内，实测会同时报出 `.integrity.json` 和 `core/types.py` 两处。
 3. **`public_data/` 缺文件**。完整性校验**管不到**数据。Windows 下解压组委会 zip 会静默丢掉 15 个乒乓球验证集视频，而校验照样「通过」。所以每次同步后跑一次 `python tools/check_dataset.py participant`。
+4. **顺手格式化**。「格式化整个目录」这类操作会把 `core/` 一起改掉；IDE 的 format-on-save 也可能动到。`git status --short` 一眼能看出来——只应出现 `participant/<task>/participant/` 下的改动。
 
 ---
 
@@ -468,9 +476,23 @@ git push -u origin feat/pingpang-trk
 | job | 做什么 | 拦什么 |
 | --- | --- | --- |
 | `integrity` | 逐任务跑 `integrity.py --verify`；再跑 `check_dataset.py` | 框架被改；验证集缺文件（后者 `integrity.py` 查不到） |
-| `baseline-diff` | 拿受保护文件与 `baseline-package` 标签比对 | 「改完 `core/` 顺手刷哈希」这种能骗过第一道防线的操作 |
+| `baseline-diff` | 逐文件比对受保护内容与 `baseline-package` 标签（**32 个文件**） | 「改完 `core/` 顺手刷哈希」这种能骗过第一道防线的操作；新增 `core/xxx.py` 也会被发现 |
 
-自测一下防线真的有效（可选）：随便往 `participant/pingpang/run.py` 追加一行 → push → 应该看到红色 `integrity`；然后 `git checkout baseline-package -- participant/pingpang/run.py` 还原。
+这道防线已经在本机用真实提交实测过 7 种情形，全部符合预期：
+
+| 情形 | 预期 | 实际 |
+| --- | --- | --- |
+| 干净状态 | PASS | PASS（32 个受保护文件） |
+| 改 `pingpang/core/types.py` | FAIL | FAIL |
+| 改 `basketball/run.sh` | FAIL | FAIL |
+| 改顶层 `run_all.sh` | FAIL | FAIL |
+| 只改文件权限位、内容不变 | PASS | PASS（不误伤） |
+| 新增 `pingpang/core/extra.py` | FAIL | FAIL（文件数变 33） |
+| 改 `core/` 后重刷 `.integrity.json` | FAIL | FAIL（同时报出两处） |
+
+> 实现上有个坑值得记一笔：`baseline-diff` 用 `git ls-tree` 取文件清单，路径**必须写字面目录名**。`participant/*/core` 这种 glob 在 git 里是对完整文件路径做 `fnmatch`，匹配不到 `participant/pingpang/core/types.py`，实测只会匹配到 1 个文件——防线静默失效却照样显示 PASS。
+
+想自己验证防线真的有效：往 `participant/pingpang/run.py` 追加一行 → push → 应该看到红色 `integrity`；然后 `git checkout baseline-package -- participant/pingpang/run.py` 还原。
 
 ### 9.4 不要提交的东西
 
