@@ -64,7 +64,8 @@ sport-vision-submit/                    ← git 仓库根
 ├── docs/
 │   ├── 赛题详情.md                        赛题原文
 │   ├── 本地资源清单.md                    ★ D 盘资源实测 + 缺文件事故修复记录
-│   └── 提交记录.md                        ★ 5 次提交机会的留痕表
+│   ├── 提交记录.md                        ★ 5 次提交机会的留痕表
+│   └── GitHub使用手册.md                  ★ GitHub 这一侧怎么用：Actions / 协作 / 出错对照
 ├── work/                                本地工作区（gitignore；训练集链接 + 自测产物）
 ├── .github/workflows/framework-guard.yml  CI：两道防线守住框架完整性
 ├── .gitattributes                        ★ 全局关闭行尾转换（删了会 exit 4）
@@ -546,7 +547,7 @@ git push -u origin feat/pingpang-trk
 ```bash
 git status --short
 du -sh .git                    # 应该只有几百 MB（主要是工程包里的视频和权重）
-git ls-files | wc -l           # 期望 83 个跟踪文件
+git ls-files | wc -l           # 期望 84 个跟踪文件（每新增一篇文档会 +1）
 ```
 
 如果 .git 涨到 GB 级，说明有东西漏进去了，用 `git rm --cached <路径>` 撤出跟踪再补进 `.gitignore`。
@@ -599,7 +600,7 @@ powershell -ExecutionPolicy Bypass -File tools\link_data.ps1
 
 # GitHub
 git remote -v                                   # 确认 fetch / push 两行都是真名
-git status --short && git ls-files | wc -l      # 期望 83 个跟踪文件
+git status --short && git ls-files | wc -l      # 期望 84 个跟踪文件
 git push -u origin main                         # 231 MB，最慢的一步
 git push origin baseline-package                # 先分支后标签，这条几乎瞬间完成
 ```

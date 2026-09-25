@@ -311,7 +311,7 @@ git push -u origin feat/pingpang-track           # 推到远端
 | 队友克隆后 `integrity.py --verify` 失败 | 本地 git 在克隆前就设了行尾转换，文件被改过 | 确认 `.gitattributes` 在位；`git config --global core.autocrlf false` 后**重新克隆**（`.gitattributes` 的 `* -text` 会覆盖 `autocrlf`，但已被污染的工作区不会自动修复） |
 | PowerShell 里命令报 `<` 相关错误 | 把 `<用户名>` 这类占位符原样粘进去了，`<` 被当成重定向 | 占位符要替换成真值 |
 | `fatal: not a git repository` | 当前目录不是仓库根 | `cd` 到仓库根；本仓库根是 `D:\mCloudDownload\sport-vision-submit` |
-| 追踪文件数不是 83 | 有东西漏进去或漏出来 | `git ls-files \| wc -l` 应为 83（Windows：`(git ls-files).Count`） |
+| 追踪文件数不是 84 | 有东西漏进去或漏出来（每新增一篇文档会 +1，属正常） | `git ls-files \| wc -l` 应为 84（Windows：`(git ls-files).Count`）；真出问题通常是训练集、缓存或压缩包这类不该入库的路径混了进来 |
 
 ---
 
