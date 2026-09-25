@@ -443,7 +443,7 @@ docker save sport-vision-submit:v1 -o sport-vision-submit.tar     # 上传这个
 
 **第 1 步：把仓库真名抄准。** 打开仓库页面 → 绿色 `Code` → `HTTPS` → 复制那一行，形如 `https://github.com/<用户名>/<仓库名>.git`。这一步不要凭记忆打字。
 
-> 本仓库的实际名字是 **`-sport-vision-submit`**——开头**有一个连字符**。少写这个连字符，推送就会得到 `repository '...' not found`。
+> **别凭记忆打字。** 踩过一次真实坑：仓库名漏了开头那个连字符（当时叫 `-sport-vision-submit`，写成了 `sport-vision-submit`），推送直接报 `repository '...' not found`。仓库名允许出现连字符，肉眼极易看漏——这类一字之差会卡很久。
 > 注意这个报错**不等于没登录成功**：它说明认证已经过了，只是那个路径下没有该账号有权访问的仓库。
 > 认证有没有过，看 Windows 凭据管理器里有没有 `GitHub - https://api.github.com/<用户名>` 这一条（`cmdkey /list`）。
 > 名字不确定时可以试探——本机授权过账号后，`git ls-remote` 能区分「存在」与「不存在」：
@@ -492,8 +492,8 @@ git push origin baseline-package   # 对象已在远端，几乎瞬间完成
 队友第一次拿到仓库：
 
 ```bash
-git clone https://github.com/<用户名>/-sport-vision-submit.git
-cd ./-sport-vision-submit                   # 注意：仓库名以 - 开头，必须加 ./，否则 cd 会把它当选项报错
+git clone https://github.com/<用户名>/sport-vision-submit.git
+cd sport-vision-submit
 python tools/check_dataset.py participant   # 期望 15 + 2 个视频齐全
 ```
 
