@@ -1,0 +1,93 @@
+name: framework-guard
+
+# 两道防线，防的是同一件事：把组委会的评测框架改坏了却没人发现。
+# 后果不是「测试失败」，而是评测时 exit 4 —— 一次提交机会直接作废。
+#
+#   1. integrity   ：跑组委会自带的 integrity.py --verify（SHA256 比对）
+#   2. baseline-diff：与 baseline-package 标签比对受保护文件
+#                     —— 额外防住「改了 core/ 之后顺手重跑 --generate 刷哈希」这条路
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  integrity:
+    name: 框架 SHA256 完整性
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 逐任务执行 integrity.py --verify
+        run: |
+          set -uo pipefail
+          fail=0
+          for t in pingpang basketball; do
+            echo "::group::$t"
+            if PYTHONPATH="participant/$t" python3 "participant/$t/integrity.py" --verify; then
+              echo "✅ $t 完整性校验通过"
+            else
+              echo "::error title=$t 完整性校验失败::$t 的 core/ 或框架脚本与 .integrity.json 不一致，评测会 exit 4"
+              fail=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $fail
+
+      - name: 按 manifest 核对验证集是否齐全
+        run: |
+          python3 tools/check_dataset.py participant
+          # integrity.py 覆盖不到 public_data/，所以这一步必须单独做：
+          # 中文文件名在 Windows 下解压时会被静默丢弃，而完整性校验照样通过。
+
+  baseline-diff:
+    name: 与 baseline-package 基线比对
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # 需要连同 baseline-package 标签一起取下来
+
+      - name: 比对受保护文件
+        run: |
+          set -uo pipefail
+          BASE="$(git rev-list -n1 baseline-package 2>/dev/null || true)"
+          if [ -z "$BASE" ]; then
+            echo "::warning title=缺少基线标签::本仓库找不到 baseline-package 标签，跳过比对。请确认标签已 push（git push origin baseline-package）。"
+            exit 0
+          fi
+          echo "基线 commit: $BASE"
+
+          PROTECTED_PATHS=(
+            'participant/run_all.sh'
+            'participant/*/core'
+            'participant/*/scripts'
+            'participant/pingpang/run.py'
+            'participant/pingpang/run.sh'
+            'participant/pingpang/validate.py'
+            'participant/pingpang/integrity.py'
+            'participant/pingpang/.integrity.json'
+            'participant/pingpang/README.md'
+            'participant/basketball/run.py'
+            'participant/basketball/run.sh'
+            'participant/basketball/validate.py'
+            'participant/basketball/integrity.py'
+            'participant/basketball/.integrity.json'
+            'participant/basketball/README.md'
+          )
+
+          CHANGED="$(git diff --name-only "$BASE" -- "${PROTECTED_PATHS[@]}")"
+
+          if [ -n "$CHANGED" ]; then
+            echo "::error title=受保护文件被改动::以下文件相对 baseline-package 变了，评测会判完整性失败（exit 4）："
+            echo "$CHANGED"
+            echo ""
+            echo "只能改 participant/<task>/participant/ 里的东西。若不是你改的，用："
+            echo "    git checkout baseline-package -- <文件>"
+            echo "还原。"
+            exit 1
+          fi
+          echo "✅ 受保护文件与 baseline-package 一致"
