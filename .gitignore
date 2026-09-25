@@ -1,0 +1,49 @@
+# ═══════════════════════════════════════════════════════════════════════
+# 本仓库只跟踪「工程包 + 代码 + 文档」。
+# 训练集（5.3GB）、基础镜像（22.7GB）、自测产物一律不入库；
+# 它们的本地路径记录在 docs/本地资源清单.md，用 tools/link_data.ps1 链接进来。
+# ═══════════════════════════════════════════════════════════════════════
+
+# ── 本地工作区（自测与训练产物）───────────────────────────────────────
+/work/
+/out/
+/output/
+/input/
+runs/
+wandb/
+*.log
+run_status.json
+predictions.jsonl
+
+# ── TRT engine 缓存与构建中间物 ───────────────────────────────────────
+**/trt_cache/
+**/out_check_solution/
+*.engine
+*.plan
+__pycache__/
+*.py[cod]
+
+# ── 体积巨大的原始资源：留在本地磁盘，库内只记录路径 ──────────────────
+pp_train_data/
+bb_train_data/
+sport-base_v1/
+participant.zip
+pp_train_data.zip
+bb_train_data.zip
+*.tar
+*.tar.gz
+*.tgz
+data/
+
+# ── 训练产物（权重若要入库，请显式 git add 具体文件）──────────────────
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
+# ── 编辑器 / 系统 ─────────────────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
