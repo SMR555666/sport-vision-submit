@@ -439,24 +439,67 @@ docker save sport-vision-submit:v1 -o sport-vision-submit.tar     # 上传这个
 
 ## 9. 上传到 GitHub 与协作
 
-### 9.1 建空仓库并推送
+### 9.1 绑远端并首次推送
 
-1. GitHub 网页 → **New repository** → 名字如 `sport-vision-submit` → **不要**勾 README / .gitignore / license（否则会有一堆无关 commit）→ **建议 Private**（仓库里有完整验证集和组委会材料）
-2. 本机首次推送：
+**第 1 步：把仓库真名抄准。** 打开仓库页面 → 绿色 `Code` → `HTTPS` → 复制那一行，形如 `https://github.com/<用户名>/<仓库名>.git`。这一步不要凭记忆打字。
+
+> 本仓库的实际名字是 **`-sport-vision-submit`**——开头**有一个连字符**。少写这个连字符，推送就会得到 `repository '...' not found`。
+> 注意这个报错**不等于没登录成功**：它说明认证已经过了，只是那个路径下没有该账号有权访问的仓库。
+> 认证有没有过，看 Windows 凭据管理器里有没有 `GitHub - https://api.github.com/<用户名>` 这一条（`cmdkey /list`）。
+> 名字不确定时可以试探——本机授权过账号后，`git ls-remote` 能区分「存在」与「不存在」：
+>
+> ```bash
+> git ls-remote --heads https://github.com/<用户名>/<候选仓库名>.git
+> # exit 0  = 仓库存在，且这个账号有权限
+> # exit 128 + remote: Repository not found. = 仓库不存在（或该账号无权访问，两种情况报错一字不差，无法区分）
+> ```
+
+**第 2 步：绑远端。**
 
 ```bash
 cd D:\mCloudDownload\sport-vision-submit
-git remote add origin https://github.com/<你的用户名>/sport-vision-submit.git
-git push -u origin main --tags
+git remote add origin https://github.com/<用户名>/<仓库名>.git
 ```
 
-> `--tags` **不能省**：`baseline-package` 标签是 CI 第二道防线的比对基准，标签没推上去那一步会打 warning 跳过。
+若报 `error: remote origin already exists`，说明之前已经绑过（`add` 只能新增、不能覆盖同名远端；报错本身没有任何副作用）。改用：
+
+```bash
+git remote set-url origin https://github.com/<用户名>/<仓库名>.git
+git remote -v      # 必须看到 fetch / push 两行都是真名
+```
+
+**第 3 步：推送——分两条，先分支后标签。**
+
+```bash
+git push -u origin main            # 231 MB，最慢的一步
+git push origin baseline-package   # 对象已在远端，几乎瞬间完成
+```
+
+> **为什么不一条 `--tags` 推完**：`baseline-package` 指向最初那个提交，单独推它等于把 231 MB 整个传一遍。实测先推标签会撞 `error: RPC failed; HTTP 504 curl 22`（大包上传的网关超时，重试通常就过）。而 `main` 上去之后，标签指向的提交已是远端已有内容的祖先，补推标签只传一个标签对象。
+> 标签**不能漏**：它是 CI 第二道防线 `baseline-diff` 的比对基准，没推上去那一步会打 warning 跳过。
+> 超 50 MB 的文件会给 `remote: warning: ... larger than GitHub's recommended maximum file size`——只是提示。本仓库两名大件 88.69 MB / 77.06 MB 均已正常入库（硬上限是 100 MB）。
 
 推送时会弹浏览器让你登录授权（本机 git 已装好 Credential Manager），不用手工造 PAT。
 
-3. 仓库 → Settings → Collaborators 添加队友的 GitHub 账号。
+**第 4 步：加协作与护栏。**
+
+1. 仓库 → Settings → Collaborators → 添加队友的 GitHub 账号。
+2. 仓库 → Settings → Rules → Rulesets（旧界面在 Branches）→ 给 `main` 加规则：勾 **Require a pull request before merging**，再勾 **Require status checks to pass**，把 `integrity` 与 `baseline-diff` 选进去。这样受保护路径被改动时 CI 会红着、PR 合不进去——把「靠自觉」变成「靠机制」。
+3. 仓库 → Settings → General 确认可见性。仓库内含完整验证集与组委会材料，建议保持 **Private**。
 
 ### 9.2 日常协作流程
+
+队友第一次拿到仓库：
+
+```bash
+git clone https://github.com/<用户名>/-sport-vision-submit.git
+cd ./-sport-vision-submit                   # 注意：仓库名以 - 开头，必须加 ./，否则 cd 会把它当选项报错
+python tools/check_dataset.py participant   # 期望 15 + 2 个视频齐全
+```
+
+> 克隆下来的仓库**不含**训练集与基础镜像（被 `.gitignore` 挡住，靠 `tools/link_data.ps1` 本地 Junction 引用），所以 `check_dataset.py` 校验的是 `participant/` 里的验证集。
+
+之后每人一个分支：
 
 ```bash
 git switch -c feat/pingpang-trk          # 每人一个分支，命名 area/what
@@ -501,7 +544,7 @@ git push -u origin feat/pingpang-trk
 ```bash
 git status --short
 du -sh .git                    # 应该只有几百 MB（主要是工程包里的视频和权重）
-git ls-files | wc -l           # 期望 ~75 个跟踪文件
+git ls-files | wc -l           # 期望 83 个跟踪文件
 ```
 
 如果 .git 涨到 GB 级，说明有东西漏进去了，用 `git rm --cached <路径>` 撤出跟踪再补进 `.gitignore`。
@@ -553,8 +596,10 @@ docker save sport-vision-submit:v1 -o sport-vision-submit.tar
 powershell -ExecutionPolicy Bypass -File tools\link_data.ps1
 
 # GitHub
-git status --short && git ls-files | wc -l
-git push -u origin main --tags
+git remote -v                                   # 确认 fetch / push 两行都是真名
+git status --short && git ls-files | wc -l      # 期望 83 个跟踪文件
+git push -u origin main                         # 231 MB，最慢的一步
+git push origin baseline-package                # 先分支后标签，这条几乎瞬间完成
 ```
 
 ---
